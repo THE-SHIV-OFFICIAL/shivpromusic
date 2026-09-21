@@ -750,3 +750,34 @@ async def add_served_chat_clone(chat_id: int, bot_id: int):
 
 async def get_served_chats_clone(bot_id: int) -> list:
     return [chat async for chat in chatsdbc.find({"bot_id": bot_id})]
+# -----------------------------
+# Thumbnail display preferences
+# -----------------------------
+thumbnaildb = mongodb.thumbnailmode
+thumbnailmode = {}
+
+
+async def is_thumbnail_enabled(chat_id: int) -> bool:
+    if chat_id in thumbnailmode:
+        return thumbnailmode[chat_id]
+    setting = await thumbnaildb.find_one({"chat_id": chat_id})
+    enabled = True if not setting else bool(setting.get("enabled", True))
+    thumbnailmode[chat_id] = enabled
+    return enabled
+
+
+async def set_thumbnail_mode(chat_id: int, enabled: bool):
+    thumbnailmode[chat_id] = bool(enabled)
+    await thumbnaildb.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"enabled": bool(enabled)}},
+        upsert=True,
+    )
+
+
+async def thumbnail_on(chat_id: int):
+    return await set_thumbnail_mode(chat_id, True)
+
+
+async def thumbnail_off(chat_id: int):
+    return await set_thumbnail_mode(chat_id, False)
